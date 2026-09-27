@@ -10,20 +10,19 @@
     body { display: grid; place-items: center; }
     button { cursor: pointer; font: inherit; }
     .stage { position: relative; width: min(100vw, 177.68vh); aspect-ratio: 1672 / 941; overflow: hidden; isolation: isolate; touch-action: none; user-select: none; }
-    .room, .found-copy { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .shade { position: absolute; inset: 0; background: rgba(3,8,23,.97); opacity: 0; pointer-events: none; transition: opacity .55s ease;
-      -webkit-mask-image: radial-gradient(circle var(--beam) at var(--x) var(--y), transparent 0 58%, rgba(0,0,0,.3) 75%, black 100%);
-      mask-image: radial-gradient(circle var(--beam) at var(--x) var(--y), transparent 0 58%, rgba(0,0,0,.3) 75%, black 100%); }
-    .dark .shade { opacity: 1; }
+    .room { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .darkness, .outline { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .darkness { z-index: 1; opacity: 0; transition: opacity .5s ease; }
+    .dark .darkness { opacity: 1; }
+    .outline { z-index: 3; opacity: 0; }
+    .found .outline { animation: glow-pulse .75s ease-in-out infinite alternate; }
+    @keyframes glow-pulse { from { opacity: .45; } to { opacity: 1; } }
     .searching { cursor: none; }
-    .beam { position: absolute; left: var(--x); top: var(--y); width: calc(var(--beam) * 1.16); height: calc(var(--beam) * 1.16); transform: translate(-50%, -50%); border: 2px solid rgba(255,240,170,.5); border-radius: 50%; box-shadow: 0 0 25px rgba(255,232,145,.23); opacity: 0; pointer-events: none; }
-    .dark .beam { opacity: 1; }
-    .found-copy { opacity: 0; filter: brightness(1.75) saturate(1.4); pointer-events: none; }
-    .found .found-copy { animation: blink .55s ease-in-out infinite alternate; }
-    @keyframes blink { to { opacity: 1; } }
+    .flashlight { position: absolute; z-index: 4; width: 23%; height: auto; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
+    .dark .flashlight { opacity: 1; }
     .top { position: absolute; top: 2.4%; left: 50%; transform: translateX(-50%); z-index: 5; }
-    .badge { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 9px 20px; background: rgba(255,249,231,.96); border: 2px solid white; border-radius: 20px; box-shadow: 0 6px 25px #14203977; color: #33445b; font-size: clamp(15px, 2.2vw, 39px); font-weight: 800; white-space: nowrap; }
-    .badge img { width: clamp(55px, 7.2vw, 130px); height: clamp(50px, 6.8vw, 122px); object-fit: contain; }
+    .badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 5px 12px; background: rgba(255,249,231,.96); border: 1px solid white; border-radius: 12px; box-shadow: 0 5px 18px #14203977; color: #33445b; font-size: clamp(13px, 1.25vw, 23px); font-weight: 800; white-space: nowrap; }
+    .badge img { width: clamp(38px, 3.6vw, 65px); height: clamp(38px, 3.6vw, 65px); object-fit: contain; }
     .counter { color: #db7731; }
     .progress { position: absolute; top: 2.5%; right: 2%; z-index: 5; padding: 8px 15px; border-radius: 20px; background: #fff9e9; font-size: clamp(12px, 1.4vw, 25px); font-weight: bold; }
     .next-wrap { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); z-index: 6; }
@@ -39,8 +38,9 @@
 <body>
   <main class="stage" id="stage">
     <img class="room" src="AA0B5E0F-DFE0-4375-9BA6-5636B83A6099.png" alt="Детская комната" draggable="false">
-    <div class="shade"></div><div class="beam"></div>
-    <img class="found-copy" id="foundCopy" src="AA0B5E0F-DFE0-4375-9BA6-5636B83A6099.png" alt="" draggable="false">
+    <canvas class="darkness" id="darkness" width="1672" height="941" aria-hidden="true"></canvas>
+    <canvas class="outline" id="outline" width="1672" height="941" aria-hidden="true"></canvas>
+    <img class="flashlight" id="flashlight" src="flashlight.png" alt="" draggable="false">
     <div class="top">
       <div class="badge" id="lookBadge" hidden>Запоминай картину! <span class="counter" id="countdown">5</span></div>
       <div class="badge" id="targetBadge" hidden>Найди: <img id="icon" alt="Предмет для поиска"></div>
@@ -73,59 +73,158 @@
       const el = id => document.getElementById(id);
       const stage = el('stage'), lookBadge = el('lookBadge'), targetBadge = el('targetBadge');
       const next = el('next'), progress = el('progress'), splash = el('splash');
+      const darkness = el('darkness'), darkCtx = darkness.getContext('2d');
+      const outline = el('outline'), outlineCtx = outline.getContext('2d');
+      const flashlight = el('flashlight');
       let order = [], round = 0, phase = 'intro', timer, current;
-      function light(x,y) {
-        stage.style.setProperty('--x', `${Math.max(0,Math.min(W,x))/W*100}%`);
-        stage.style.setProperty('--y', `${Math.max(0,Math.min(H,y))/H*100}%`);
+      let lightX = W/2, lightY = H/2, beamFrame = 0;
+
+      function lensPosition(x,y) {
+        return { x: Math.max(50,Math.min(W-50,x < 210 ? x+55 : x-55)), y: Math.min(H-48,y+130) };
       }
-      function sizeBeam() { stage.style.setProperty('--beam', `${stage.clientWidth*.125}px`); }
+
+      function light(x,y) {
+        lightX=Math.max(0,Math.min(W,x)); lightY=Math.max(0,Math.min(H,y));
+        const source=lensPosition(lightX,lightY);
+        // The lens is near the upper middle of the transparent sprite.
+        flashlight.style.left=`${(source.x-195)/W*100}%`;
+        flashlight.style.top=`${(source.y-23)/H*100}%`;
+        if(!beamFrame) beamFrame=requestAnimationFrame(()=>{
+          beamFrame=0; drawBeam(lensPosition(lightX,lightY),lightX,lightY);
+        });
+      }
+
+      function drawBeam(source,x,y) {
+        darkCtx.clearRect(0,0,W,H);
+        darkCtx.fillStyle='rgba(3,8,23,.96)'; darkCtx.fillRect(0,0,W,H);
+        const dx=x-source.x, dy=y-source.y, length=Math.hypot(dx,dy)||1;
+        const nx=-dy/length, ny=dx/length;
+        darkCtx.save(); darkCtx.globalCompositeOperation='destination-out';
+        darkCtx.filter='blur(20px)'; darkCtx.fillStyle='rgba(255,255,255,.72)';
+        darkCtx.beginPath();
+        darkCtx.moveTo(source.x+nx*12,source.y+ny*12);
+        darkCtx.lineTo(x+nx*112,y+ny*112);
+        darkCtx.lineTo(x-nx*112,y-ny*112);
+        darkCtx.lineTo(source.x-nx*12,source.y-ny*12);
+        darkCtx.closePath(); darkCtx.fill(); darkCtx.restore();
+        darkCtx.globalCompositeOperation='destination-out';
+        const spot=darkCtx.createRadialGradient(x,y,8,x,y,145);
+        spot.addColorStop(0,'rgba(255,255,255,1)');
+        spot.addColorStop(.58,'rgba(255,255,255,.92)');
+        spot.addColorStop(1,'rgba(255,255,255,0)');
+        darkCtx.fillStyle=spot; darkCtx.beginPath(); darkCtx.arc(x,y,145,0,Math.PI*2); darkCtx.fill();
+        darkCtx.globalCompositeOperation='source-over';
+      }
+
+      function highlightObject(item) {
+        outlineCtx.clearRect(0,0,W,H);
+        const image=new Image();
+        image.onload=()=>{
+          if(phase!=='found'||current!==item) return;
+          const raw=document.createElement('canvas'); raw.width=image.naturalWidth; raw.height=image.naturalHeight;
+          const rc=raw.getContext('2d',{willReadFrequently:true}); rc.drawImage(image,0,0);
+          const rgba=rc.getImageData(0,0,raw.width,raw.height).data;
+          let minX=raw.width,minY=raw.height,maxX=0,maxY=0;
+
+          for(let yy=0;yy<raw.height;yy++) for(let xx=0;xx<raw.width;xx++) {
+            if(rgba[(yy*raw.width+xx)*4+3]>220) {
+              minX=Math.min(minX,xx); minY=Math.min(minY,yy);
+              maxX=Math.max(maxX,xx); maxY=Math.max(maxY,yy);
+            }
+          }
+          if(minX>maxX) return;
+
+          const [x1,y1,x2,y2]=item.box, bw=x2-x1, bh=y2-y1;
+          const mask=document.createElement('canvas'); mask.width=bw; mask.height=bh;
+          const mc=mask.getContext('2d',{willReadFrequently:true});
+          mc.drawImage(image,minX,minY,maxX-minX+1,maxY-minY+1,0,0,bw,bh);
+          const pixels=mc.getImageData(0,0,bw,bh);
+
+          for(let i=0;i<pixels.data.length;i+=4) {
+            const a=pixels.data[i+3]>=175?255:0;
+            pixels.data[i]=255; pixels.data[i+1]=226; pixels.data[i+2]=92; pixels.data[i+3]=a;
+          }
+          mc.putImageData(pixels,0,0);
+
+          outlineCtx.save(); outlineCtx.shadowColor='#ffe35b'; outlineCtx.shadowBlur=25;
+          outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
+          outlineCtx.save(); outlineCtx.globalCompositeOperation='destination-out';
+          outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
+          // A faint fill brightens the item itself while the glow follows its silhouette.
+          outlineCtx.save(); outlineCtx.globalAlpha=.15; outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
+        };
+        image.src=`gitkeep/${item.file}`;
+      }
+
       function shuffle() {
         order = items.map((_,i)=>i);
-        for(let i=order.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+        for(let i=order.length-1;i>0;i--) {
+          const j=Math.floor(Math.random()*(i+1));
+          [order[i],order[j]]=[order[j],order[i]];
+        }
       }
+
       function beginLook() {
         clearInterval(timer); phase='look';
         stage.classList.remove('dark','searching','found');
+        outlineCtx.clearRect(0,0,W,H);
         targetBadge.hidden = next.hidden = true;
         lookBadge.hidden = progress.hidden = false;
         progress.textContent = `${round+1} / ${items.length}`;
         let remaining=5; el('countdown').textContent=remaining;
-        timer=setInterval(()=>{ remaining--; if(remaining>0) el('countdown').textContent=remaining; else { clearInterval(timer); beginSearch(); } },1000);
+        timer=setInterval(()=>{
+          remaining--;
+          if(remaining>0) el('countdown').textContent=remaining;
+          else { clearInterval(timer); beginSearch(); }
+        },1000);
       }
+
       function beginSearch() {
         phase='search'; current=items[order[round]]; light(W/2,H/2);
         el('icon').src=`gitkeep/${current.file}`; el('icon').alt=current.name;
         lookBadge.hidden=true; targetBadge.hidden=false;
         stage.classList.add('dark','searching');
       }
+
       function found() {
         if(phase!=='search') return;
         phase='found'; stage.classList.remove('searching'); stage.classList.add('found');
-        const [x1,y1,x2,y2]=current.box;
-        el('foundCopy').style.clipPath=`inset(${y1/H*100}% ${(W-x2)/W*100}% ${(H-y2)/H*100}% ${x1/W*100}%)`;
-        next.textContent=round===items.length-1?'Завершить игру':'Искать новый предмет'; next.hidden=false;
+        highlightObject(current);
+        next.textContent=round===items.length-1?'Завершить игру':'Искать новый предмет';
+        next.hidden=false;
       }
+
       function move(e) {
         if(phase!=='search') return;
-        e.preventDefault(); const r=stage.getBoundingClientRect();
+        e.preventDefault();
+        const r=stage.getBoundingClientRect();
         const x=(e.clientX-r.left)/r.width*W, y=(e.clientY-r.top)/r.height*H;
-        light(x,y); const [x1,y1,x2,y2]=current.box;
+        light(x,y);
+        const [x1,y1,x2,y2]=current.box;
         if(x>=x1&&x<=x2&&y>=y1&&y<=y2) found();
       }
-      stage.addEventListener('pointermove',move); stage.addEventListener('pointerdown',move);
+
+      stage.addEventListener('pointermove',move);
+      stage.addEventListener('pointerdown',move);
       stage.addEventListener('dragstart',e=>e.preventDefault());
-      window.addEventListener('resize',sizeBeam);
-      el('start').addEventListener('click',()=>{ splash.hidden=true; shuffle(); round=0; beginLook(); });
+
+      el('start').addEventListener('click',()=>{
+        splash.hidden=true; shuffle(); round=0; beginLook();
+      });
+
       next.addEventListener('click',()=>{
-        if(phase!=='found') return; round++;
+        if(phase!=='found') return;
+        round++;
         if(round<items.length) { beginLook(); return; }
         phase='complete'; stage.classList.remove('dark','found');
         targetBadge.hidden=next.hidden=progress.hidden=true;
         el('title').textContent='Все предметы найдены!';
         el('message').textContent='Ты справился с волшебным фонариком!';
-        el('start').textContent='Играть снова'; splash.hidden=false;
+        el('start').textContent='Играть снова';
+        splash.hidden=false;
       });
-      sizeBeam(); light(W/2,H/2);
+
+      light(W/2,H/2);
     })();
   </script>
 </body>
