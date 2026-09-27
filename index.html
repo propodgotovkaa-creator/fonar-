@@ -1,1 +1,132 @@
-
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Волшебный фонарик</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #15233a; font-family: Arial, sans-serif; }
+    body { display: grid; place-items: center; }
+    button { cursor: pointer; font: inherit; }
+    .stage { position: relative; width: min(100vw, 177.68vh); aspect-ratio: 1672 / 941; overflow: hidden; isolation: isolate; touch-action: none; user-select: none; }
+    .room, .found-copy { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .shade { position: absolute; inset: 0; background: rgba(3,8,23,.97); opacity: 0; pointer-events: none; transition: opacity .55s ease;
+      -webkit-mask-image: radial-gradient(circle var(--beam) at var(--x) var(--y), transparent 0 58%, rgba(0,0,0,.3) 75%, black 100%);
+      mask-image: radial-gradient(circle var(--beam) at var(--x) var(--y), transparent 0 58%, rgba(0,0,0,.3) 75%, black 100%); }
+    .dark .shade { opacity: 1; }
+    .searching { cursor: none; }
+    .beam { position: absolute; left: var(--x); top: var(--y); width: calc(var(--beam) * 1.16); height: calc(var(--beam) * 1.16); transform: translate(-50%, -50%); border: 2px solid rgba(255,240,170,.5); border-radius: 50%; box-shadow: 0 0 25px rgba(255,232,145,.23); opacity: 0; pointer-events: none; }
+    .dark .beam { opacity: 1; }
+    .found-copy { opacity: 0; filter: brightness(1.75) saturate(1.4); pointer-events: none; }
+    .found .found-copy { animation: blink .55s ease-in-out infinite alternate; }
+    @keyframes blink { to { opacity: 1; } }
+    .top { position: absolute; top: 2.4%; left: 50%; transform: translateX(-50%); z-index: 5; }
+    .badge { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 9px 20px; background: rgba(255,249,231,.96); border: 2px solid white; border-radius: 20px; box-shadow: 0 6px 25px #14203977; color: #33445b; font-size: clamp(15px, 2.2vw, 39px); font-weight: 800; white-space: nowrap; }
+    .badge img { width: clamp(55px, 7.2vw, 130px); height: clamp(50px, 6.8vw, 122px); object-fit: contain; }
+    .counter { color: #db7731; }
+    .progress { position: absolute; top: 2.5%; right: 2%; z-index: 5; padding: 8px 15px; border-radius: 20px; background: #fff9e9; font-size: clamp(12px, 1.4vw, 25px); font-weight: bold; }
+    .next-wrap { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); z-index: 6; }
+    .button { padding: .65em 1.35em; border: 3px solid #fff5ce; border-radius: 100px; background: linear-gradient(#ffce68,#f3933f); color: #483142; font-size: clamp(16px, 2.15vw, 38px); font-weight: 800; white-space: nowrap; box-shadow: 0 6px 0 #a95c34, 0 12px 24px #0005; }
+    .button:active { transform: translateY(4px); box-shadow: 0 2px 0 #a95c34; }
+    .splash { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: #101d35bb; text-align: center; }
+    .panel { max-width: 82%; padding: clamp(20px, 4vw, 65px); border-radius: 28px; background: #fff9e9; color: #33445b; box-shadow: 0 20px 60px #0006; }
+    .panel h1 { margin: 0 0 .25em; font-size: clamp(28px, 4vw, 72px); }
+    .panel p { margin: 0 0 1.3em; font-size: clamp(15px, 1.7vw, 30px); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <img class="room" src="AA0B5E0F-DFE0-4375-9BA6-5636B83A6099.png" alt="Детская комната" draggable="false">
+    <div class="shade"></div><div class="beam"></div>
+    <img class="found-copy" id="foundCopy" src="AA0B5E0F-DFE0-4375-9BA6-5636B83A6099.png" alt="" draggable="false">
+    <div class="top">
+      <div class="badge" id="lookBadge" hidden>Запоминай картину! <span class="counter" id="countdown">5</span></div>
+      <div class="badge" id="targetBadge" hidden>Найди: <img id="icon" alt="Предмет для поиска"></div>
+    </div>
+    <div class="progress" id="progress" hidden></div>
+    <div class="next-wrap"><button class="button" id="next" hidden>Искать новый предмет</button></div>
+    <div class="splash" id="splash"><div class="panel">
+      <h1 id="title">Волшебный фонарик</h1>
+      <p id="message">Посмотри на комнату. Когда погаснет свет, найди предмет с помощью фонарика!</p>
+      <button class="button" id="start">Начать игру</button>
+    </div></div>
+  </main>
+  <script>
+    (() => {
+      const W = 1672, H = 941;
+      // Координаты предметов на исходной картине: x1, y1, x2, y2.
+      const items = [
+        {name:'панама', file:'panama_hat.png', box:[42,68,166,220]},
+        {name:'корова', file:'cow.png', box:[1345,36,1517,158]},
+        {name:'молоко', file:'milk.png', box:[154,328,212,401]},
+        {name:'малина', file:'raspberries.png', box:[1480,580,1640,680]},
+        {name:'пижама', file:'pajamas.png', box:[585,50,720,315]},
+        {name:'собака', file:'dog.png', box:[5,612,314,768]},
+        {name:'кубики', file:'blocks.png', box:[420,603,640,742]},
+        {name:'машина', file:'car.png', box:[749,659,950,772]},
+        {name:'монета', file:'coin.png', box:[88,574,158,620]},
+        {name:'газета', file:'newspaper.png', box:[1333,535,1607,622]},
+        {name:'сапоги', file:'boots.png', box:[1343,730,1510,930]}
+      ];
+      const el = id => document.getElementById(id);
+      const stage = el('stage'), lookBadge = el('lookBadge'), targetBadge = el('targetBadge');
+      const next = el('next'), progress = el('progress'), splash = el('splash');
+      let order = [], round = 0, phase = 'intro', timer, current;
+      function light(x,y) {
+        stage.style.setProperty('--x', `${Math.max(0,Math.min(W,x))/W*100}%`);
+        stage.style.setProperty('--y', `${Math.max(0,Math.min(H,y))/H*100}%`);
+      }
+      function sizeBeam() { stage.style.setProperty('--beam', `${stage.clientWidth*.125}px`); }
+      function shuffle() {
+        order = items.map((_,i)=>i);
+        for(let i=order.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+      }
+      function beginLook() {
+        clearInterval(timer); phase='look';
+        stage.classList.remove('dark','searching','found');
+        targetBadge.hidden = next.hidden = true;
+        lookBadge.hidden = progress.hidden = false;
+        progress.textContent = `${round+1} / ${items.length}`;
+        let remaining=5; el('countdown').textContent=remaining;
+        timer=setInterval(()=>{ remaining--; if(remaining>0) el('countdown').textContent=remaining; else { clearInterval(timer); beginSearch(); } },1000);
+      }
+      function beginSearch() {
+        phase='search'; current=items[order[round]]; light(W/2,H/2);
+        el('icon').src=`gitkeep/${current.file}`; el('icon').alt=current.name;
+        lookBadge.hidden=true; targetBadge.hidden=false;
+        stage.classList.add('dark','searching');
+      }
+      function found() {
+        if(phase!=='search') return;
+        phase='found'; stage.classList.remove('searching'); stage.classList.add('found');
+        const [x1,y1,x2,y2]=current.box;
+        el('foundCopy').style.clipPath=`inset(${y1/H*100}% ${(W-x2)/W*100}% ${(H-y2)/H*100}% ${x1/W*100}%)`;
+        next.textContent=round===items.length-1?'Завершить игру':'Искать новый предмет'; next.hidden=false;
+      }
+      function move(e) {
+        if(phase!=='search') return;
+        e.preventDefault(); const r=stage.getBoundingClientRect();
+        const x=(e.clientX-r.left)/r.width*W, y=(e.clientY-r.top)/r.height*H;
+        light(x,y); const [x1,y1,x2,y2]=current.box;
+        if(x>=x1&&x<=x2&&y>=y1&&y<=y2) found();
+      }
+      stage.addEventListener('pointermove',move); stage.addEventListener('pointerdown',move);
+      stage.addEventListener('dragstart',e=>e.preventDefault());
+      window.addEventListener('resize',sizeBeam);
+      el('start').addEventListener('click',()=>{ splash.hidden=true; shuffle(); round=0; beginLook(); });
+      next.addEventListener('click',()=>{
+        if(phase!=='found') return; round++;
+        if(round<items.length) { beginLook(); return; }
+        phase='complete'; stage.classList.remove('dark','found');
+        targetBadge.hidden=next.hidden=progress.hidden=true;
+        el('title').textContent='Все предметы найдены!';
+        el('message').textContent='Ты справился с волшебным фонариком!';
+        el('start').textContent='Играть снова'; splash.hidden=false;
+      });
+      sizeBeam(); light(W/2,H/2);
+    })();
+  </script>
+</body>
+</html>
