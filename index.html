@@ -18,15 +18,15 @@
     .found .outline { animation: glow-pulse .75s ease-in-out infinite alternate; }
     @keyframes glow-pulse { from { opacity: .45; } to { opacity: 1; } }
     .searching { cursor: none; }
-    .flashlight { position: absolute; z-index: 4; width: 23%; height: auto; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
-    .dark .flashlight { opacity: 1; }
-    .top { position: absolute; top: 2.4%; left: 50%; transform: translateX(-50%); z-index: 5; }
-    .badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 5px 12px; background: rgba(255,249,231,.96); border: 1px solid white; border-radius: 12px; box-shadow: 0 5px 18px #14203977; color: #33445b; font-size: clamp(13px, 1.25vw, 23px); font-weight: 800; white-space: nowrap; }
-    .badge img { width: clamp(38px, 3.6vw, 65px); height: clamp(38px, 3.6vw, 65px); object-fit: contain; }
+    .flashlight { position: absolute; z-index: 4; width: 23%; height: auto; pointer-events: none; opacity: 0; transition: opacity .35s ease; touch-action: none; }
+    .dark .flashlight { opacity: 1; pointer-events: auto; cursor: grab; }
+    .dark .flashlight.dragging { cursor: grabbing; }
+    .top { position: absolute; bottom: 2%; left: 2%; z-index: 5; }
+    .badge { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 3px 8px; background: rgba(255,249,231,.95); border: 1px solid white; border-radius: 9px; box-shadow: 0 4px 12px #14203966; color: #33445b; font-size: clamp(11px, .95vw, 18px); font-weight: 800; white-space: nowrap; }
+    .badge img { width: clamp(28px, 2.6vw, 47px); height: clamp(28px, 2.6vw, 47px); object-fit: contain; }
     .counter { color: #db7731; }
-    .progress { position: absolute; top: 2.5%; right: 2%; z-index: 5; padding: 8px 15px; border-radius: 20px; background: #fff9e9; font-size: clamp(12px, 1.4vw, 25px); font-weight: bold; }
-    .next-wrap { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); z-index: 6; }
-    .button { padding: .65em 1.35em; border: 3px solid #fff5ce; border-radius: 100px; background: linear-gradient(#ffce68,#f3933f); color: #483142; font-size: clamp(16px, 2.15vw, 38px); font-weight: 800; white-space: nowrap; box-shadow: 0 6px 0 #a95c34, 0 12px 24px #0005; }
+    .next-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 6; }
+    .button { padding: .55em 1.15em; border: 2px solid #fff5ce; border-radius: 100px; background: linear-gradient(#ffce68,#f3933f); color: #483142; font-size: clamp(14px, 1.35vw, 25px); font-weight: 800; white-space: nowrap; box-shadow: 0 5px 0 #a95c34, 0 10px 22px #0005; }
     .button:active { transform: translateY(4px); box-shadow: 0 2px 0 #a95c34; }
     .splash { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: #101d35bb; text-align: center; }
     .panel { max-width: 82%; padding: clamp(20px, 4vw, 65px); border-radius: 28px; background: #fff9e9; color: #33445b; box-shadow: 0 20px 60px #0006; }
@@ -45,11 +45,10 @@
       <div class="badge" id="lookBadge" hidden>Запоминай картину! <span class="counter" id="countdown">5</span></div>
       <div class="badge" id="targetBadge" hidden>Найди: <img id="icon" alt="Предмет для поиска"></div>
     </div>
-    <div class="progress" id="progress" hidden></div>
     <div class="next-wrap"><button class="button" id="next" hidden>Искать новый предмет</button></div>
     <div class="splash" id="splash"><div class="panel">
       <h1 id="title">Волшебный фонарик</h1>
-      <p id="message">Посмотри на комнату. Когда погаснет свет, найди предмет с помощью фонарика!</p>
+      <p id="message">Запомни комнату. Когда погаснет свет, зажми фонарик и води им по картине!</p>
       <button class="button" id="start">Начать игру</button>
     </div></div>
   </main>
@@ -70,94 +69,137 @@
         {name:'газета', file:'newspaper.png', box:[1333,535,1607,622]},
         {name:'сапоги', file:'boots.png', box:[1343,730,1510,930]}
       ];
+
       const el = id => document.getElementById(id);
       const stage = el('stage'), lookBadge = el('lookBadge'), targetBadge = el('targetBadge');
-      const next = el('next'), progress = el('progress'), splash = el('splash');
+      const next = el('next'), splash = el('splash');
       const darkness = el('darkness'), darkCtx = darkness.getContext('2d');
       const outline = el('outline'), outlineCtx = outline.getContext('2d');
       const flashlight = el('flashlight');
+
       let order = [], round = 0, phase = 'intro', timer, current;
-      let lightX = W/2, lightY = H/2, beamFrame = 0;
+      let lightX = W/2, lightY = H/2, lensX = W/2-55, lensY = H/2+130;
+      let beamFrame = 0, dragging = false, offsetX = 0, offsetY = 0;
 
-      function lensPosition(x,y) {
-        return { x: Math.max(50,Math.min(W-50,x < 210 ? x+55 : x-55)), y: Math.min(H-48,y+130) };
-      }
+      function positionFlashlight(x,y) {
+        lensX=Math.max(35,Math.min(W-35,x));
+        lensY=Math.max(40,Math.min(H-30,y));
+        lightX=Math.max(0,Math.min(W,lensX+55));
+        lightY=Math.max(0,Math.min(H,lensY-130));
 
-      function light(x,y) {
-        lightX=Math.max(0,Math.min(W,x)); lightY=Math.max(0,Math.min(H,y));
-        const source=lensPosition(lightX,lightY);
-        // The lens is near the upper middle of the transparent sprite.
-        flashlight.style.left=`${(source.x-195)/W*100}%`;
-        flashlight.style.top=`${(source.y-23)/H*100}%`;
+        // Эти отступы совмещают головку фонарика с началом луча.
+        flashlight.style.left=`${(lensX-195)/W*100}%`;
+        flashlight.style.top=`${(lensY-23)/H*100}%`;
+
         if(!beamFrame) beamFrame=requestAnimationFrame(()=>{
-          beamFrame=0; drawBeam(lensPosition(lightX,lightY),lightX,lightY);
+          beamFrame=0;
+          drawBeam({x:lensX,y:lensY},lightX,lightY);
         });
+
+        if(phase==='search') testTarget();
       }
 
       function drawBeam(source,x,y) {
         darkCtx.clearRect(0,0,W,H);
-        darkCtx.fillStyle='rgba(3,8,23,.96)'; darkCtx.fillRect(0,0,W,H);
-        const dx=x-source.x, dy=y-source.y, length=Math.hypot(dx,dy)||1;
+        darkCtx.fillStyle='rgba(3,8,23,.96)';
+        darkCtx.fillRect(0,0,W,H);
+
+        const dx=x-source.x, dy=y-source.y;
+        const length=Math.hypot(dx,dy)||1;
         const nx=-dy/length, ny=dx/length;
-        darkCtx.save(); darkCtx.globalCompositeOperation='destination-out';
-        darkCtx.filter='blur(20px)'; darkCtx.fillStyle='rgba(255,255,255,.72)';
+
+        darkCtx.save();
+        darkCtx.globalCompositeOperation='destination-out';
+        darkCtx.filter='blur(20px)';
+        darkCtx.fillStyle='rgba(255,255,255,.72)';
         darkCtx.beginPath();
         darkCtx.moveTo(source.x+nx*12,source.y+ny*12);
         darkCtx.lineTo(x+nx*112,y+ny*112);
         darkCtx.lineTo(x-nx*112,y-ny*112);
         darkCtx.lineTo(source.x-nx*12,source.y-ny*12);
-        darkCtx.closePath(); darkCtx.fill(); darkCtx.restore();
+        darkCtx.closePath();
+        darkCtx.fill();
+        darkCtx.restore();
+
         darkCtx.globalCompositeOperation='destination-out';
         const spot=darkCtx.createRadialGradient(x,y,8,x,y,145);
         spot.addColorStop(0,'rgba(255,255,255,1)');
         spot.addColorStop(.58,'rgba(255,255,255,.92)');
         spot.addColorStop(1,'rgba(255,255,255,0)');
-        darkCtx.fillStyle=spot; darkCtx.beginPath(); darkCtx.arc(x,y,145,0,Math.PI*2); darkCtx.fill();
+        darkCtx.fillStyle=spot;
+        darkCtx.beginPath();
+        darkCtx.arc(x,y,145,0,Math.PI*2);
+        darkCtx.fill();
         darkCtx.globalCompositeOperation='source-over';
       }
 
       function highlightObject(item) {
         outlineCtx.clearRect(0,0,W,H);
         const image=new Image();
+
         image.onload=()=>{
           if(phase!=='found'||current!==item) return;
-          const raw=document.createElement('canvas'); raw.width=image.naturalWidth; raw.height=image.naturalHeight;
-          const rc=raw.getContext('2d',{willReadFrequently:true}); rc.drawImage(image,0,0);
+
+          const raw=document.createElement('canvas');
+          raw.width=image.naturalWidth;
+          raw.height=image.naturalHeight;
+          const rc=raw.getContext('2d',{willReadFrequently:true});
+          rc.drawImage(image,0,0);
           const rgba=rc.getImageData(0,0,raw.width,raw.height).data;
           let minX=raw.width,minY=raw.height,maxX=0,maxY=0;
 
-          for(let yy=0;yy<raw.height;yy++) for(let xx=0;xx<raw.width;xx++) {
-            if(rgba[(yy*raw.width+xx)*4+3]>220) {
-              minX=Math.min(minX,xx); minY=Math.min(minY,yy);
-              maxX=Math.max(maxX,xx); maxY=Math.max(maxY,yy);
+          for(let yy=0;yy<raw.height;yy++) {
+            for(let xx=0;xx<raw.width;xx++) {
+              if(rgba[(yy*raw.width+xx)*4+3]>220) {
+                minX=Math.min(minX,xx);
+                minY=Math.min(minY,yy);
+                maxX=Math.max(maxX,xx);
+                maxY=Math.max(maxY,yy);
+              }
             }
           }
           if(minX>maxX) return;
 
-          const [x1,y1,x2,y2]=item.box, bw=x2-x1, bh=y2-y1;
-          const mask=document.createElement('canvas'); mask.width=bw; mask.height=bh;
+          const [x1,y1,x2,y2]=item.box;
+          const bw=x2-x1, bh=y2-y1;
+          const mask=document.createElement('canvas');
+          mask.width=bw;
+          mask.height=bh;
           const mc=mask.getContext('2d',{willReadFrequently:true});
           mc.drawImage(image,minX,minY,maxX-minX+1,maxY-minY+1,0,0,bw,bh);
           const pixels=mc.getImageData(0,0,bw,bh);
 
           for(let i=0;i<pixels.data.length;i+=4) {
             const a=pixels.data[i+3]>=175?255:0;
-            pixels.data[i]=255; pixels.data[i+1]=226; pixels.data[i+2]=92; pixels.data[i+3]=a;
+            pixels.data[i]=255;
+            pixels.data[i+1]=226;
+            pixels.data[i+2]=92;
+            pixels.data[i+3]=a;
           }
           mc.putImageData(pixels,0,0);
 
-          outlineCtx.save(); outlineCtx.shadowColor='#ffe35b'; outlineCtx.shadowBlur=25;
-          outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
-          outlineCtx.save(); outlineCtx.globalCompositeOperation='destination-out';
-          outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
-          // A faint fill brightens the item itself while the glow follows its silhouette.
-          outlineCtx.save(); outlineCtx.globalAlpha=.15; outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
+          outlineCtx.save();
+          outlineCtx.shadowColor='#ffe35b';
+          outlineCtx.shadowBlur=25;
+          outlineCtx.drawImage(mask,x1,y1);
+          outlineCtx.restore();
+
+          outlineCtx.save();
+          outlineCtx.globalCompositeOperation='destination-out';
+          outlineCtx.drawImage(mask,x1,y1);
+          outlineCtx.restore();
+
+          outlineCtx.save();
+          outlineCtx.globalAlpha=.15;
+          outlineCtx.drawImage(mask,x1,y1);
+          outlineCtx.restore();
         };
+
         image.src=`gitkeep/${item.file}`;
       }
 
       function shuffle() {
-        order = items.map((_,i)=>i);
+        order=items.map((_,i)=>i);
         for(let i=order.length-1;i>0;i--) {
           const j=Math.floor(Math.random()*(i+1));
           [order[i],order[j]]=[order[j],order[i]];
@@ -165,66 +207,117 @@
       }
 
       function beginLook() {
-        clearInterval(timer); phase='look';
+        clearInterval(timer);
+        phase='look';
         stage.classList.remove('dark','searching','found');
         outlineCtx.clearRect(0,0,W,H);
-        targetBadge.hidden = next.hidden = true;
-        lookBadge.hidden = progress.hidden = false;
-        progress.textContent = `${round+1} / ${items.length}`;
-        let remaining=5; el('countdown').textContent=remaining;
+        targetBadge.hidden=true;
+        next.hidden=true;
+        lookBadge.hidden=false;
+
+        let remaining=5;
+        el('countdown').textContent=remaining;
         timer=setInterval(()=>{
           remaining--;
           if(remaining>0) el('countdown').textContent=remaining;
-          else { clearInterval(timer); beginSearch(); }
+          else {
+            clearInterval(timer);
+            beginSearch();
+          }
         },1000);
       }
 
       function beginSearch() {
-        phase='search'; current=items[order[round]]; light(W/2,H/2);
-        el('icon').src=`gitkeep/${current.file}`; el('icon').alt=current.name;
-        lookBadge.hidden=true; targetBadge.hidden=false;
+        phase='search';
+        current=items[order[round]];
+        positionFlashlight(W/2-55,H/2+130);
+        el('icon').src=`gitkeep/${current.file}`;
+        el('icon').alt=current.name;
+        lookBadge.hidden=true;
+        targetBadge.hidden=false;
         stage.classList.add('dark','searching');
       }
 
       function found() {
         if(phase!=='search') return;
-        phase='found'; stage.classList.remove('searching'); stage.classList.add('found');
+        phase='found';
+        stage.classList.remove('searching');
+        stage.classList.add('found');
         highlightObject(current);
-        next.textContent=round===items.length-1?'Завершить игру':'Искать новый предмет';
+        next.textContent=round===items.length-1?'Завершить игру':'Играть дальше';
         next.hidden=false;
       }
 
-      function move(e) {
+      function testTarget() {
         if(phase!=='search') return;
-        e.preventDefault();
-        const r=stage.getBoundingClientRect();
-        const x=(e.clientX-r.left)/r.width*W, y=(e.clientY-r.top)/r.height*H;
-        light(x,y);
         const [x1,y1,x2,y2]=current.box;
-        if(x>=x1&&x<=x2&&y>=y1&&y<=y2) found();
+        if(lightX>=x1&&lightX<=x2&&lightY>=y1&&lightY<=y2) found();
       }
 
-      stage.addEventListener('pointermove',move);
-      stage.addEventListener('pointerdown',move);
+      function point(e) {
+        const r=stage.getBoundingClientRect();
+        return {
+          x:(e.clientX-r.left)/r.width*W,
+          y:(e.clientY-r.top)/r.height*H
+        };
+      }
+
+      flashlight.addEventListener('pointerdown',e=>{
+        if(phase!=='search') return;
+        e.preventDefault();
+        const p=point(e);
+        offsetX=p.x-lensX;
+        offsetY=p.y-lensY;
+        dragging=true;
+        flashlight.classList.add('dragging');
+        flashlight.setPointerCapture(e.pointerId);
+      });
+
+      flashlight.addEventListener('pointermove',e=>{
+        if(!dragging||phase!=='search') return;
+        e.preventDefault();
+        const p=point(e);
+        positionFlashlight(p.x-offsetX,p.y-offsetY);
+      });
+
+      function stopDragging(e) {
+        dragging=false;
+        flashlight.classList.remove('dragging');
+        if(flashlight.hasPointerCapture(e.pointerId)) {
+          flashlight.releasePointerCapture(e.pointerId);
+        }
+      }
+
+      flashlight.addEventListener('pointerup',stopDragging);
+      flashlight.addEventListener('pointercancel',stopDragging);
       stage.addEventListener('dragstart',e=>e.preventDefault());
 
       el('start').addEventListener('click',()=>{
-        splash.hidden=true; shuffle(); round=0; beginLook();
+        splash.hidden=true;
+        shuffle();
+        round=0;
+        beginLook();
       });
 
       next.addEventListener('click',()=>{
         if(phase!=='found') return;
         round++;
-        if(round<items.length) { beginLook(); return; }
-        phase='complete'; stage.classList.remove('dark','found');
-        targetBadge.hidden=next.hidden=progress.hidden=true;
+        if(round<items.length) {
+          beginLook();
+          return;
+        }
+
+        phase='complete';
+        stage.classList.remove('dark','found');
+        targetBadge.hidden=true;
+        next.hidden=true;
         el('title').textContent='Все предметы найдены!';
         el('message').textContent='Ты справился с волшебным фонариком!';
         el('start').textContent='Играть снова';
         splash.hidden=false;
       });
 
-      light(W/2,H/2);
+      positionFlashlight(W/2-55,H/2+130);
     })();
   </script>
 </body>
