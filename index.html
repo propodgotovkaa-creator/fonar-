@@ -10,151 +10,41 @@
     body { display: grid; place-items: center; transition: background .5s ease; }
     body.lights-off { background: #030711; }
     button { cursor: pointer; font: inherit; }
-
-    .stage {
-      position: relative;
-      width: min(100vw, 177.68vh);
-      aspect-ratio: 1672 / 941;
-      overflow: hidden;
-      isolation: isolate;
-      touch-action: none;
-      user-select: none;
-    }
+    .stage { position: relative; width: min(100vw, 177.68vh); aspect-ratio: 1672 / 941; overflow: hidden; isolation: isolate; touch-action: none; user-select: none; }
     .room { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .darkness, .outline {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
+    .darkness, .outline { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .darkness { z-index: 1; opacity: 0; transition: opacity .5s ease; }
     .dark .darkness { opacity: 1; }
     .outline { z-index: 3; }
-
-    .flashlight {
-      position: absolute;
-      z-index: 4;
-      width: 23%;
-      height: auto;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .35s ease;
-      touch-action: none;
-    }
-    .searching .flashlight, .found .flashlight {
-      opacity: 1;
-      pointer-events: auto;
-      cursor: grab;
-    }
+    .flashlight { position: absolute; z-index: 4; width: 23%; height: auto; pointer-events: none; opacity: 0; transition: opacity .35s ease; touch-action: none; }
+    .searching .flashlight, .found .flashlight { opacity: 1; pointer-events: auto; cursor: grab; }
     .flashlight.dragging { cursor: grabbing; }
-
     .top { position: absolute; bottom: 2%; left: 2%; z-index: 5; }
-    .badge {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      padding: 3px 8px;
-      background: rgba(255,249,231,.95);
-      border: 1px solid white;
-      border-radius: 9px;
-      box-shadow: 0 4px 12px #14203966;
-      color: #33445b;
-      font-size: clamp(11px, .95vw, 18px);
-      font-weight: 800;
-      white-space: nowrap;
-    }
+    .badge { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 3px 8px; background: rgba(255,249,231,.95); border: 1px solid white; border-radius: 9px; box-shadow: 0 4px 12px #14203966; color: #33445b; font-size: clamp(11px, .95vw, 18px); font-weight: 800; white-space: nowrap; }
     .counter { color: #db7731; }
-
-    .next-wrap {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%,-50%);
-      z-index: 6;
-    }
-    .button {
-      padding: .55em 1.15em;
-      border: 2px solid #fff5ce;
-      border-radius: 100px;
-      background: linear-gradient(#ffce68,#f3933f);
-      color: #483142;
-      font-size: clamp(14px, 1.35vw, 25px);
-      font-weight: 800;
-      white-space: nowrap;
-      box-shadow: 0 5px 0 #a95c34, 0 10px 22px #0005;
-    }
-    .button:active {
-      transform: translateY(4px);
-      box-shadow: 0 2px 0 #a95c34;
-    }
-
-    .prompt {
-      position: absolute;
-      inset: 0;
-      z-index: 7;
-      display: grid;
-      place-items: center;
-      background: rgba(2,6,18,.28);
-    }
-    .prompt-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: clamp(8px, 1vw, 16px);
-      padding: clamp(14px, 2vw, 30px) clamp(22px, 3vw, 46px);
-      border: 2px solid #fff4d7;
-      border-radius: 22px;
-      background: #fff9e9;
-      box-shadow: 0 15px 38px #0009;
-      color: #33445b;
-    }
-    .prompt-card strong { font-size: clamp(17px, 2vw, 34px); }
-    .prompt-card img {
-      width: clamp(56px, 7vw, 120px);
-      height: clamp(48px, 6vw, 100px);
-      object-fit: contain;
-    }
-
-    .splash {
-      position: absolute;
-      inset: 0;
-      z-index: 10;
-      display: grid;
-      place-items: center;
-      background: #101d35bb;
-      text-align: center;
-    }
-    .panel {
-      max-width: 82%;
-      padding: clamp(20px, 4vw, 65px);
-      border-radius: 28px;
-      background: #fff9e9;
-      color: #33445b;
-      box-shadow: 0 20px 60px #0006;
-    }
+    .next-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 6; }
+    .button { padding: .55em 1.15em; border: 2px solid #fff5ce; border-radius: 100px; background: linear-gradient(#ffce68,#f3933f); color: #483142; font-size: clamp(14px, 1.35vw, 25px); font-weight: 800; white-space: nowrap; box-shadow: 0 5px 0 #a95c34, 0 10px 22px #0005; }
+    .button:active { transform: translateY(4px); box-shadow: 0 2px 0 #a95c34; }
+    .splash { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: #101d35bb; text-align: center; }
+    .panel { max-width: 82%; padding: clamp(20px, 4vw, 65px); border-radius: 28px; background: #fff9e9; color: #33445b; box-shadow: 0 20px 60px #0006; }
     .panel h1 { margin: 0 0 .25em; font-size: clamp(28px, 4vw, 72px); }
     .panel p { margin: 0 0 1.3em; font-size: clamp(15px, 1.7vw, 30px); }
+    .prompt { position: absolute; inset: 0; z-index: 7; display: grid; place-items: center; background: rgba(2,6,18,.28); }
+    .prompt-card { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1vw, 16px); padding: clamp(14px, 2vw, 30px) clamp(22px, 3vw, 46px); border: 2px solid #fff4d7; border-radius: 22px; background: #fff9e9; box-shadow: 0 15px 38px #0009; color: #33445b; }
+    .prompt-card strong { font-size: clamp(17px, 2vw, 34px); }
+    .prompt-card img { width: clamp(56px, 7vw, 120px); height: clamp(48px, 6vw, 100px); object-fit: contain; }
     [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <main class="stage" id="stage">
-    <img
-      class="room"
-      src="AA0B5E0F-DFE0-4375-9BA6-5636B83A6099.png"
-      alt="Детская комната"
-      draggable="false"
-    >
+    <img class="room" src="AA0B5E0F-DFE0-4375-9BA6-5636B83A6099.png" alt="Детская комната" draggable="false">
     <canvas class="darkness" id="darkness" width="1672" height="941" aria-hidden="true"></canvas>
     <canvas class="outline" id="outline" width="1672" height="941" aria-hidden="true"></canvas>
     <img class="flashlight" id="flashlight" src="flashlight.png" alt="" draggable="false">
 
     <div class="top">
-      <div class="badge" id="lookBadge" hidden>
-        Запоминай картину! <span class="counter" id="countdown">5</span>
-      </div>
+      <div class="badge" id="lookBadge" hidden>Запоминай картину! <span class="counter" id="countdown">5</span></div>
     </div>
 
     <div class="prompt" id="prompt" hidden>
@@ -180,7 +70,8 @@
 
   <script>
     (() => {
-      const W = 1672, H = 941;
+      const W = 1672;
+      const H = 941;
 
       // Координаты предметов на исходной картине: x1, y1, x2, y2.
       const items = [
@@ -203,18 +94,16 @@
       const prompt = el('prompt');
       const next = el('next');
       const splash = el('splash');
-      const darkness = el('darkness');
-      const darkCtx = darkness.getContext('2d');
-      const outline = el('outline');
-      const outlineCtx = outline.getContext('2d');
+      const darkCtx = el('darkness').getContext('2d');
+      const outlineCtx = el('outline').getContext('2d');
       const flashlight = el('flashlight');
+      const imageCache = new Map();
 
       let order = [];
       let round = 0;
       let phase = 'intro';
       let timer;
       let current;
-
       let lightX = W / 2;
       let lightY = H / 2;
       let lensX = W / 2 - 55;
@@ -224,13 +113,23 @@
       let offsetX = 0;
       let offsetY = 0;
 
+      function preloadItem(item) {
+        if (!item || imageCache.has(item.file)) return;
+
+        const image = new Image();
+        image.decoding = 'async';
+        image.src = `gitkeep/${item.file}`;
+        imageCache.set(item.file, image);
+
+        if (image.decode) image.decode().catch(() => {});
+      }
+
       function positionFlashlight(x, y) {
         lensX = Math.max(35, Math.min(W - 35, x));
         lensY = Math.max(40, Math.min(H - 30, y));
         lightX = Math.max(0, Math.min(W, lensX + 55));
         lightY = Math.max(0, Math.min(H, lensY - 130));
 
-        // Совмещаем начало луча с золотой головкой фонарика.
         flashlight.style.left = `${(lensX - 195) / W * 100}%`;
         flashlight.style.top = `${(lensY - 23) / H * 100}%`;
 
@@ -245,12 +144,12 @@
       }
 
       function drawBeam(source, x, y) {
-        // Сначала затемняем всю картину, затем создаём мягкий свет.
         darkCtx.clearRect(0, 0, W, H);
         darkCtx.fillStyle = 'rgba(2,5,14,.95)';
         darkCtx.fillRect(0, 0, W, H);
         darkCtx.globalCompositeOperation = 'destination-out';
 
+        // Несколько мягких участков света создают рассеянный луч.
         for (let i = 0; i <= 16; i++) {
           const t = i / 16;
           const px = source.x + (x - source.x) * t;
@@ -284,18 +183,20 @@
 
       function highlightObject(item) {
         outlineCtx.clearRect(0, 0, W, H);
-        const image = new Image();
+        const image = imageCache.get(item.file);
 
-        image.onload = () => {
+        const paint = () => {
           if (phase !== 'found' || current !== item) return;
 
+          // Для контура используем уменьшенную копию картинки.
           const raw = document.createElement('canvas');
-          raw.width = image.naturalWidth;
-          raw.height = image.naturalHeight;
-          const rc = raw.getContext('2d', {willReadFrequently:true});
-          rc.drawImage(image, 0, 0);
+          raw.width = 256;
+          raw.height = Math.round(256 * image.naturalHeight / image.naturalWidth);
 
+          const rc = raw.getContext('2d', {willReadFrequently:true});
+          rc.drawImage(image, 0, 0, raw.width, raw.height);
           const rgba = rc.getImageData(0, 0, raw.width, raw.height).data;
+
           let minX = raw.width;
           let minY = raw.height;
           let maxX = 0;
@@ -303,7 +204,7 @@
 
           for (let yy = 0; yy < raw.height; yy++) {
             for (let xx = 0; xx < raw.width; xx++) {
-              if (rgba[(yy * raw.width + xx) * 4 + 3] > 220) {
+              if (rgba[(yy * raw.width + xx) * 4 + 3] > 100) {
                 minX = Math.min(minX, xx);
                 minY = Math.min(minY, yy);
                 maxX = Math.max(maxX, xx);
@@ -322,52 +223,43 @@
 
           const mc = mask.getContext('2d', {willReadFrequently:true});
           mc.drawImage(
-            image,
+            raw,
             minX, minY, maxX - minX + 1, maxY - minY + 1,
             0, 0, bw, bh
           );
 
           const pixels = mc.getImageData(0, 0, bw, bh);
           for (let i = 0; i < pixels.data.length; i += 4) {
-            const alpha = pixels.data[i + 3] >= 175 ? 255 : 0;
+            const alpha = pixels.data[i + 3] >= 120 ? 255 : 0;
             pixels.data[i] = 255;
-            pixels.data[i + 1] = 226;
-            pixels.data[i + 2] = 92;
+            pixels.data[i + 1] = 245;
+            pixels.data[i + 2] = 155;
             pixels.data[i + 3] = alpha;
           }
           mc.putImageData(pixels, 0, 0);
 
-          // Постоянная аккуратная подсветка по форме предмета.
+          // Рисуем только тонкую линию снаружи предмета.
+          // Здесь нет размытия, тени или полупрозрачной заливки.
           outlineCtx.save();
-          outlineCtx.filter = 'blur(5px)';
-          outlineCtx.globalAlpha = .65;
-          outlineCtx.drawImage(mask, x1, y1);
-          outlineCtx.restore();
-
-          outlineCtx.save();
-          outlineCtx.globalAlpha = .4;
           for (const [dx, dy] of [
-            [-2,0], [2,0], [0,-2], [0,2],
-            [-1,-1], [1,-1], [-1,1], [1,1]
+            [-4,0], [4,0], [0,-4], [0,4],
+            [-3,-3], [3,-3], [-3,3], [3,3]
           ]) {
             outlineCtx.drawImage(mask, x1 + dx, y1 + dy);
           }
           outlineCtx.restore();
 
-          // Убираем заливку изнутри, оставляя тонкий светлый контур.
           outlineCtx.save();
           outlineCtx.globalCompositeOperation = 'destination-out';
           outlineCtx.drawImage(mask, x1, y1);
           outlineCtx.restore();
-
-          // Чуть подсвечиваем сам предмет.
-          outlineCtx.save();
-          outlineCtx.globalAlpha = .20;
-          outlineCtx.drawImage(mask, x1, y1);
-          outlineCtx.restore();
         };
 
-        image.src = `gitkeep/${item.file}`;
+        if (image.complete && image.naturalWidth) {
+          paint();
+        } else {
+          image.addEventListener('load', paint, {once:true});
+        }
       }
 
       function shuffle() {
@@ -381,6 +273,10 @@
       function beginLook() {
         clearInterval(timer);
         phase = 'look';
+
+        // Загружаем только ближайший предмет, пока комната освещена.
+        preloadItem(items[order[round]]);
+
         stage.classList.remove('dark', 'searching', 'found');
         document.body.classList.remove('lights-off');
         outlineCtx.clearRect(0, 0, W, H);
@@ -406,7 +302,8 @@
         phase = 'prompt';
         current = items[order[round]];
         lookBadge.hidden = true;
-        el('icon').src = `gitkeep/${current.file}`;
+
+        el('icon').src = imageCache.get(current.file).src;
         el('icon').alt = current.name;
 
         darkCtx.clearRect(0, 0, W, H);
@@ -428,10 +325,14 @@
 
       function found() {
         if (phase !== 'search') return;
+
         phase = 'found';
         stage.classList.remove('searching');
         stage.classList.add('found');
         highlightObject(current);
+
+        // Следующая картинка начинает загружаться ещё до нового раунда.
+        preloadItem(items[order[round + 1]]);
 
         next.textContent = round === items.length - 1
           ? 'Завершить игру'
@@ -442,6 +343,7 @@
       function testTarget() {
         if (phase !== 'search') return;
         const [x1, y1, x2, y2] = current.box;
+
         if (lightX >= x1 && lightX <= x2 && lightY >= y1 && lightY <= y2) {
           found();
         }
