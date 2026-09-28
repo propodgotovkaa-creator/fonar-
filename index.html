@@ -7,32 +7,31 @@
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #15233a; font-family: Arial, sans-serif; }
-    body { display: grid; place-items: center; transition: background .5s ease; }
-    body.lights-off { background: #030711; }
+    body { display: grid; place-items: center; }
     button { cursor: pointer; font: inherit; }
     .stage { position: relative; width: min(100vw, 177.68vh); aspect-ratio: 1672 / 941; overflow: hidden; isolation: isolate; touch-action: none; user-select: none; }
     .room { position: absolute; inset: 0; width: 100%; height: 100%; }
     .darkness, .outline { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .darkness { z-index: 1; opacity: 0; transition: opacity .5s ease; }
     .dark .darkness { opacity: 1; }
-    .outline { z-index: 3; }
-    .flashlight { position: absolute; z-index: 4; width: 23%; height: auto; pointer-events: none; opacity: 0; transition: opacity .35s ease; touch-action: none; }
-    .searching .flashlight, .found .flashlight { opacity: 1; pointer-events: auto; cursor: grab; }
-    .flashlight.dragging { cursor: grabbing; }
-    .top { position: absolute; bottom: 2%; left: 2%; z-index: 5; }
-    .badge { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 3px 8px; background: rgba(255,249,231,.95); border: 1px solid white; border-radius: 9px; box-shadow: 0 4px 12px #14203966; color: #33445b; font-size: clamp(11px, .95vw, 18px); font-weight: 800; white-space: nowrap; }
+    .outline { z-index: 3; opacity: 0; }
+    .found .outline { animation: glow-pulse .75s ease-in-out infinite alternate; }
+    @keyframes glow-pulse { from { opacity: .45; } to { opacity: 1; } }
+    .searching { cursor: none; }
+    .flashlight { position: absolute; z-index: 4; width: 23%; height: auto; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
+    .dark .flashlight { opacity: 1; }
+    .top { position: absolute; top: 2.4%; left: 50%; transform: translateX(-50%); z-index: 5; }
+    .badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 5px 12px; background: rgba(255,249,231,.96); border: 1px solid white; border-radius: 12px; box-shadow: 0 5px 18px #14203977; color: #33445b; font-size: clamp(13px, 1.25vw, 23px); font-weight: 800; white-space: nowrap; }
+    .badge img { width: clamp(38px, 3.6vw, 65px); height: clamp(38px, 3.6vw, 65px); object-fit: contain; }
     .counter { color: #db7731; }
-    .next-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 6; }
-    .button { padding: .55em 1.15em; border: 2px solid #fff5ce; border-radius: 100px; background: linear-gradient(#ffce68,#f3933f); color: #483142; font-size: clamp(14px, 1.35vw, 25px); font-weight: 800; white-space: nowrap; box-shadow: 0 5px 0 #a95c34, 0 10px 22px #0005; }
+    .progress { position: absolute; top: 2.5%; right: 2%; z-index: 5; padding: 8px 15px; border-radius: 20px; background: #fff9e9; font-size: clamp(12px, 1.4vw, 25px); font-weight: bold; }
+    .next-wrap { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); z-index: 6; }
+    .button { padding: .65em 1.35em; border: 3px solid #fff5ce; border-radius: 100px; background: linear-gradient(#ffce68,#f3933f); color: #483142; font-size: clamp(16px, 2.15vw, 38px); font-weight: 800; white-space: nowrap; box-shadow: 0 6px 0 #a95c34, 0 12px 24px #0005; }
     .button:active { transform: translateY(4px); box-shadow: 0 2px 0 #a95c34; }
     .splash { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: #101d35bb; text-align: center; }
     .panel { max-width: 82%; padding: clamp(20px, 4vw, 65px); border-radius: 28px; background: #fff9e9; color: #33445b; box-shadow: 0 20px 60px #0006; }
     .panel h1 { margin: 0 0 .25em; font-size: clamp(28px, 4vw, 72px); }
     .panel p { margin: 0 0 1.3em; font-size: clamp(15px, 1.7vw, 30px); }
-    .prompt { position: absolute; inset: 0; z-index: 7; display: grid; place-items: center; background: rgba(2,6,18,.28); }
-    .prompt-card { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1vw, 16px); padding: clamp(14px, 2vw, 30px) clamp(22px, 3vw, 46px); border: 2px solid #fff4d7; border-radius: 22px; background: #fff9e9; box-shadow: 0 15px 38px #0009; color: #33445b; }
-    .prompt-card strong { font-size: clamp(17px, 2vw, 34px); }
-    .prompt-card img { width: clamp(56px, 7vw, 120px); height: clamp(48px, 6vw, 100px); object-fit: contain; }
     [hidden] { display: none !important; }
   </style>
 </head>
@@ -42,37 +41,21 @@
     <canvas class="darkness" id="darkness" width="1672" height="941" aria-hidden="true"></canvas>
     <canvas class="outline" id="outline" width="1672" height="941" aria-hidden="true"></canvas>
     <img class="flashlight" id="flashlight" src="flashlight.png" alt="" draggable="false">
-
     <div class="top">
       <div class="badge" id="lookBadge" hidden>Запоминай картину! <span class="counter" id="countdown">5</span></div>
+      <div class="badge" id="targetBadge" hidden>Найди: <img id="icon" alt="Предмет для поиска"></div>
     </div>
-
-    <div class="prompt" id="prompt" hidden>
-      <div class="prompt-card">
-        <strong>Найди:</strong>
-        <img id="icon" alt="Предмет для поиска">
-        <button class="button" id="seek">Искать</button>
-      </div>
-    </div>
-
-    <div class="next-wrap">
-      <button class="button" id="next" hidden>Играть дальше</button>
-    </div>
-
-    <div class="splash" id="splash">
-      <div class="panel">
-        <h1 id="title">Волшебный фонарик</h1>
-        <p id="message">Запомни комнату. Когда погаснет свет, зажми фонарик и води им по картине!</p>
-        <button class="button" id="start">Начать игру</button>
-      </div>
-    </div>
+    <div class="progress" id="progress" hidden></div>
+    <div class="next-wrap"><button class="button" id="next" hidden>Искать новый предмет</button></div>
+    <div class="splash" id="splash"><div class="panel">
+      <h1 id="title">Волшебный фонарик</h1>
+      <p id="message">Посмотри на комнату. Когда погаснет свет, найди предмет с помощью фонарика!</p>
+      <button class="button" id="start">Начать игру</button>
+    </div></div>
   </main>
-
   <script>
     (() => {
-      const W = 1672;
-      const H = 941;
-
+      const W = 1672, H = 941;
       // Координаты предметов на исходной картине: x1, y1, x2, y2.
       const items = [
         {name:'панама', file:'panama_hat.png', box:[42,68,166,220]},
@@ -87,337 +70,161 @@
         {name:'газета', file:'newspaper.png', box:[1333,535,1607,622]},
         {name:'сапоги', file:'boots.png', box:[1343,730,1510,930]}
       ];
-
       const el = id => document.getElementById(id);
-      const stage = el('stage');
-      const lookBadge = el('lookBadge');
-      const prompt = el('prompt');
-      const next = el('next');
-      const splash = el('splash');
-      const darkCtx = el('darkness').getContext('2d');
-      const outlineCtx = el('outline').getContext('2d');
+      const stage = el('stage'), lookBadge = el('lookBadge'), targetBadge = el('targetBadge');
+      const next = el('next'), progress = el('progress'), splash = el('splash');
+      const darkness = el('darkness'), darkCtx = darkness.getContext('2d');
+      const outline = el('outline'), outlineCtx = outline.getContext('2d');
       const flashlight = el('flashlight');
-      const imageCache = new Map();
+      let order = [], round = 0, phase = 'intro', timer, current;
+      let lightX = W/2, lightY = H/2, beamFrame = 0;
 
-      let order = [];
-      let round = 0;
-      let phase = 'intro';
-      let timer;
-      let current;
-      let lightX = W / 2;
-      let lightY = H / 2;
-      let lensX = W / 2 - 55;
-      let lensY = H / 2 + 130;
-      let beamFrame = 0;
-      let dragging = false;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      function preloadItem(item) {
-        if (!item || imageCache.has(item.file)) return;
-
-        const image = new Image();
-        image.decoding = 'async';
-        image.src = `gitkeep/${item.file}`;
-        imageCache.set(item.file, image);
-
-        if (image.decode) image.decode().catch(() => {});
+      function lensPosition(x,y) {
+        return { x: Math.max(50,Math.min(W-50,x < 210 ? x+55 : x-55)), y: Math.min(H-48,y+130) };
       }
 
-      function positionFlashlight(x, y) {
-        lensX = Math.max(35, Math.min(W - 35, x));
-        lensY = Math.max(40, Math.min(H - 30, y));
-        lightX = Math.max(0, Math.min(W, lensX + 55));
-        lightY = Math.max(0, Math.min(H, lensY - 130));
-
-        flashlight.style.left = `${(lensX - 195) / W * 100}%`;
-        flashlight.style.top = `${(lensY - 23) / H * 100}%`;
-
-        if (!beamFrame) {
-          beamFrame = requestAnimationFrame(() => {
-            beamFrame = 0;
-            drawBeam({x:lensX, y:lensY}, lightX, lightY);
-          });
-        }
-
-        if (phase === 'search') testTarget();
+      function light(x,y) {
+        lightX=Math.max(0,Math.min(W,x)); lightY=Math.max(0,Math.min(H,y));
+        const source=lensPosition(lightX,lightY);
+        // The lens is near the upper middle of the transparent sprite.
+        flashlight.style.left=`${(source.x-195)/W*100}%`;
+        flashlight.style.top=`${(source.y-23)/H*100}%`;
+        if(!beamFrame) beamFrame=requestAnimationFrame(()=>{
+          beamFrame=0; drawBeam(lensPosition(lightX,lightY),lightX,lightY);
+        });
       }
 
-      function drawBeam(source, x, y) {
-        darkCtx.clearRect(0, 0, W, H);
-        darkCtx.fillStyle = 'rgba(2,5,14,.95)';
-        darkCtx.fillRect(0, 0, W, H);
-        darkCtx.globalCompositeOperation = 'destination-out';
-
-        // Несколько мягких участков света создают рассеянный луч.
-        for (let i = 0; i <= 16; i++) {
-          const t = i / 16;
-          const px = source.x + (x - source.x) * t;
-          const py = source.y + (y - source.y) * t;
-          const radius = 18 + 92 * t;
-          const strength = .09 + .08 * t;
-          const haze = darkCtx.createRadialGradient(px, py, 0, px, py, radius);
-
-          haze.addColorStop(0, `rgba(255,255,255,${strength})`);
-          haze.addColorStop(.45, `rgba(255,255,255,${strength * .48})`);
-          haze.addColorStop(1, 'rgba(255,255,255,0)');
-
-          darkCtx.fillStyle = haze;
-          darkCtx.beginPath();
-          darkCtx.arc(px, py, radius, 0, Math.PI * 2);
-          darkCtx.fill();
-        }
-
-        const spot = darkCtx.createRadialGradient(x, y, 0, x, y, 140);
-        spot.addColorStop(0, 'rgba(255,255,255,1)');
-        spot.addColorStop(.32, 'rgba(255,255,255,.9)');
-        spot.addColorStop(.68, 'rgba(255,255,255,.48)');
-        spot.addColorStop(1, 'rgba(255,255,255,0)');
-
-        darkCtx.fillStyle = spot;
+      function drawBeam(source,x,y) {
+        darkCtx.clearRect(0,0,W,H);
+        darkCtx.fillStyle='rgba(3,8,23,.96)'; darkCtx.fillRect(0,0,W,H);
+        const dx=x-source.x, dy=y-source.y, length=Math.hypot(dx,dy)||1;
+        const nx=-dy/length, ny=dx/length;
+        darkCtx.save(); darkCtx.globalCompositeOperation='destination-out';
+        darkCtx.filter='blur(20px)'; darkCtx.fillStyle='rgba(255,255,255,.72)';
         darkCtx.beginPath();
-        darkCtx.arc(x, y, 140, 0, Math.PI * 2);
-        darkCtx.fill();
-        darkCtx.globalCompositeOperation = 'source-over';
+        darkCtx.moveTo(source.x+nx*12,source.y+ny*12);
+        darkCtx.lineTo(x+nx*112,y+ny*112);
+        darkCtx.lineTo(x-nx*112,y-ny*112);
+        darkCtx.lineTo(source.x-nx*12,source.y-ny*12);
+        darkCtx.closePath(); darkCtx.fill(); darkCtx.restore();
+        darkCtx.globalCompositeOperation='destination-out';
+        const spot=darkCtx.createRadialGradient(x,y,8,x,y,145);
+        spot.addColorStop(0,'rgba(255,255,255,1)');
+        spot.addColorStop(.58,'rgba(255,255,255,.92)');
+        spot.addColorStop(1,'rgba(255,255,255,0)');
+        darkCtx.fillStyle=spot; darkCtx.beginPath(); darkCtx.arc(x,y,145,0,Math.PI*2); darkCtx.fill();
+        darkCtx.globalCompositeOperation='source-over';
       }
 
       function highlightObject(item) {
-        outlineCtx.clearRect(0, 0, W, H);
-        const image = imageCache.get(item.file);
+        outlineCtx.clearRect(0,0,W,H);
+        const image=new Image();
+        image.onload=()=>{
+          if(phase!=='found'||current!==item) return;
+          const raw=document.createElement('canvas'); raw.width=image.naturalWidth; raw.height=image.naturalHeight;
+          const rc=raw.getContext('2d',{willReadFrequently:true}); rc.drawImage(image,0,0);
+          const rgba=rc.getImageData(0,0,raw.width,raw.height).data;
+          let minX=raw.width,minY=raw.height,maxX=0,maxY=0;
 
-        const paint = () => {
-          if (phase !== 'found' || current !== item) return;
-
-          // Для контура используем уменьшенную копию картинки.
-          const raw = document.createElement('canvas');
-          raw.width = 256;
-          raw.height = Math.round(256 * image.naturalHeight / image.naturalWidth);
-
-          const rc = raw.getContext('2d', {willReadFrequently:true});
-          rc.drawImage(image, 0, 0, raw.width, raw.height);
-          const rgba = rc.getImageData(0, 0, raw.width, raw.height).data;
-
-          let minX = raw.width;
-          let minY = raw.height;
-          let maxX = 0;
-          let maxY = 0;
-
-          for (let yy = 0; yy < raw.height; yy++) {
-            for (let xx = 0; xx < raw.width; xx++) {
-              if (rgba[(yy * raw.width + xx) * 4 + 3] > 100) {
-                minX = Math.min(minX, xx);
-                minY = Math.min(minY, yy);
-                maxX = Math.max(maxX, xx);
-                maxY = Math.max(maxY, yy);
-              }
+          for(let yy=0;yy<raw.height;yy++) for(let xx=0;xx<raw.width;xx++) {
+            if(rgba[(yy*raw.width+xx)*4+3]>220) {
+              minX=Math.min(minX,xx); minY=Math.min(minY,yy);
+              maxX=Math.max(maxX,xx); maxY=Math.max(maxY,yy);
             }
           }
-          if (minX > maxX) return;
+          if(minX>maxX) return;
 
-          const [x1, y1, x2, y2] = item.box;
-          const bw = x2 - x1;
-          const bh = y2 - y1;
-          const mask = document.createElement('canvas');
-          mask.width = bw;
-          mask.height = bh;
+          const [x1,y1,x2,y2]=item.box, bw=x2-x1, bh=y2-y1;
+          const mask=document.createElement('canvas'); mask.width=bw; mask.height=bh;
+          const mc=mask.getContext('2d',{willReadFrequently:true});
+          mc.drawImage(image,minX,minY,maxX-minX+1,maxY-minY+1,0,0,bw,bh);
+          const pixels=mc.getImageData(0,0,bw,bh);
 
-          const mc = mask.getContext('2d', {willReadFrequently:true});
-          mc.drawImage(
-            raw,
-            minX, minY, maxX - minX + 1, maxY - minY + 1,
-            0, 0, bw, bh
-          );
-
-          const pixels = mc.getImageData(0, 0, bw, bh);
-          for (let i = 0; i < pixels.data.length; i += 4) {
-            const alpha = pixels.data[i + 3] >= 120 ? 255 : 0;
-            pixels.data[i] = 255;
-            pixels.data[i + 1] = 245;
-            pixels.data[i + 2] = 155;
-            pixels.data[i + 3] = alpha;
+          for(let i=0;i<pixels.data.length;i+=4) {
+            const a=pixels.data[i+3]>=175?255:0;
+            pixels.data[i]=255; pixels.data[i+1]=226; pixels.data[i+2]=92; pixels.data[i+3]=a;
           }
-          mc.putImageData(pixels, 0, 0);
+          mc.putImageData(pixels,0,0);
 
-          // Рисуем только тонкую линию снаружи предмета.
-          // Здесь нет размытия, тени или полупрозрачной заливки.
-          outlineCtx.save();
-          for (const [dx, dy] of [
-            [-4,0], [4,0], [0,-4], [0,4],
-            [-3,-3], [3,-3], [-3,3], [3,3]
-          ]) {
-            outlineCtx.drawImage(mask, x1 + dx, y1 + dy);
-          }
-          outlineCtx.restore();
-
-          outlineCtx.save();
-          outlineCtx.globalCompositeOperation = 'destination-out';
-          outlineCtx.drawImage(mask, x1, y1);
-          outlineCtx.restore();
+          outlineCtx.save(); outlineCtx.shadowColor='#ffe35b'; outlineCtx.shadowBlur=25;
+          outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
+          outlineCtx.save(); outlineCtx.globalCompositeOperation='destination-out';
+          outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
+          // A faint fill brightens the item itself while the glow follows its silhouette.
+          outlineCtx.save(); outlineCtx.globalAlpha=.15; outlineCtx.drawImage(mask,x1,y1); outlineCtx.restore();
         };
-
-        if (image.complete && image.naturalWidth) {
-          paint();
-        } else {
-          image.addEventListener('load', paint, {once:true});
-        }
+        image.src=`gitkeep/${item.file}`;
       }
 
       function shuffle() {
-        order = items.map((_, i) => i);
-        for (let i = order.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [order[i], order[j]] = [order[j], order[i]];
+        order = items.map((_,i)=>i);
+        for(let i=order.length-1;i>0;i--) {
+          const j=Math.floor(Math.random()*(i+1));
+          [order[i],order[j]]=[order[j],order[i]];
         }
       }
 
       function beginLook() {
-        clearInterval(timer);
-        phase = 'look';
-
-        // Загружаем только ближайший предмет, пока комната освещена.
-        preloadItem(items[order[round]]);
-
-        stage.classList.remove('dark', 'searching', 'found');
-        document.body.classList.remove('lights-off');
-        outlineCtx.clearRect(0, 0, W, H);
-        prompt.hidden = true;
-        next.hidden = true;
-        lookBadge.hidden = false;
-
-        let remaining = round === 0 ? 5 : 3;
-        el('countdown').textContent = remaining;
-
-        timer = setInterval(() => {
+        clearInterval(timer); phase='look';
+        stage.classList.remove('dark','searching','found');
+        outlineCtx.clearRect(0,0,W,H);
+        targetBadge.hidden = next.hidden = true;
+        lookBadge.hidden = progress.hidden = false;
+        progress.textContent = `${round+1} / ${items.length}`;
+        let remaining=5; el('countdown').textContent=remaining;
+        timer=setInterval(()=>{
           remaining--;
-          if (remaining > 0) {
-            el('countdown').textContent = remaining;
-          } else {
-            clearInterval(timer);
-            showPrompt();
-          }
-        }, 1000);
-      }
-
-      function showPrompt() {
-        phase = 'prompt';
-        current = items[order[round]];
-        lookBadge.hidden = true;
-
-        el('icon').src = imageCache.get(current.file).src;
-        el('icon').alt = current.name;
-
-        darkCtx.clearRect(0, 0, W, H);
-        darkCtx.fillStyle = 'rgba(2,5,14,.95)';
-        darkCtx.fillRect(0, 0, W, H);
-
-        stage.classList.add('dark');
-        document.body.classList.add('lights-off');
-        prompt.hidden = false;
+          if(remaining>0) el('countdown').textContent=remaining;
+          else { clearInterval(timer); beginSearch(); }
+        },1000);
       }
 
       function beginSearch() {
-        if (phase !== 'prompt') return;
-        phase = 'search';
-        prompt.hidden = true;
-        positionFlashlight(W / 2 - 55, H / 2 + 130);
-        stage.classList.add('searching');
+        phase='search'; current=items[order[round]]; light(W/2,H/2);
+        el('icon').src=`gitkeep/${current.file}`; el('icon').alt=current.name;
+        lookBadge.hidden=true; targetBadge.hidden=false;
+        stage.classList.add('dark','searching');
       }
 
       function found() {
-        if (phase !== 'search') return;
-
-        phase = 'found';
-        stage.classList.remove('searching');
-        stage.classList.add('found');
+        if(phase!=='search') return;
+        phase='found'; stage.classList.remove('searching'); stage.classList.add('found');
         highlightObject(current);
-
-        // Следующая картинка начинает загружаться ещё до нового раунда.
-        preloadItem(items[order[round + 1]]);
-
-        next.textContent = round === items.length - 1
-          ? 'Завершить игру'
-          : 'Играть дальше';
-        next.hidden = false;
+        next.textContent=round===items.length-1?'Завершить игру':'Искать новый предмет';
+        next.hidden=false;
       }
 
-      function testTarget() {
-        if (phase !== 'search') return;
-        const [x1, y1, x2, y2] = current.box;
-
-        if (lightX >= x1 && lightX <= x2 && lightY >= y1 && lightY <= y2) {
-          found();
-        }
-      }
-
-      function point(e) {
-        const r = stage.getBoundingClientRect();
-        return {
-          x: (e.clientX - r.left) / r.width * W,
-          y: (e.clientY - r.top) / r.height * H
-        };
-      }
-
-      flashlight.addEventListener('pointerdown', e => {
-        if (phase !== 'search' && phase !== 'found') return;
+      function move(e) {
+        if(phase!=='search') return;
         e.preventDefault();
-
-        const p = point(e);
-        offsetX = p.x - lensX;
-        offsetY = p.y - lensY;
-        dragging = true;
-        flashlight.classList.add('dragging');
-        flashlight.setPointerCapture(e.pointerId);
-      });
-
-      flashlight.addEventListener('pointermove', e => {
-        if (!dragging || (phase !== 'search' && phase !== 'found')) return;
-        e.preventDefault();
-
-        const p = point(e);
-        positionFlashlight(p.x - offsetX, p.y - offsetY);
-      });
-
-      function stopDragging(e) {
-        dragging = false;
-        flashlight.classList.remove('dragging');
-        if (flashlight.hasPointerCapture(e.pointerId)) {
-          flashlight.releasePointerCapture(e.pointerId);
-        }
+        const r=stage.getBoundingClientRect();
+        const x=(e.clientX-r.left)/r.width*W, y=(e.clientY-r.top)/r.height*H;
+        light(x,y);
+        const [x1,y1,x2,y2]=current.box;
+        if(x>=x1&&x<=x2&&y>=y1&&y<=y2) found();
       }
 
-      flashlight.addEventListener('pointerup', stopDragging);
-      flashlight.addEventListener('pointercancel', stopDragging);
-      stage.addEventListener('dragstart', e => e.preventDefault());
+      stage.addEventListener('pointermove',move);
+      stage.addEventListener('pointerdown',move);
+      stage.addEventListener('dragstart',e=>e.preventDefault());
 
-      el('start').addEventListener('click', () => {
-        splash.hidden = true;
-        shuffle();
-        round = 0;
-        beginLook();
+      el('start').addEventListener('click',()=>{
+        splash.hidden=true; shuffle(); round=0; beginLook();
       });
 
-      el('seek').addEventListener('click', beginSearch);
-
-      next.addEventListener('click', () => {
-        if (phase !== 'found') return;
+      next.addEventListener('click',()=>{
+        if(phase!=='found') return;
         round++;
-
-        if (round < items.length) {
-          beginLook();
-          return;
-        }
-
-        phase = 'complete';
-        stage.classList.remove('dark', 'found');
-        document.body.classList.remove('lights-off');
-        next.hidden = true;
-        el('title').textContent = 'Все предметы найдены!';
-        el('message').textContent = 'Ты справился с волшебным фонариком!';
-        el('start').textContent = 'Играть снова';
-        splash.hidden = false;
+        if(round<items.length) { beginLook(); return; }
+        phase='complete'; stage.classList.remove('dark','found');
+        targetBadge.hidden=next.hidden=progress.hidden=true;
+        el('title').textContent='Все предметы найдены!';
+        el('message').textContent='Ты справился с волшебным фонариком!';
+        el('start').textContent='Играть снова';
+        splash.hidden=false;
       });
 
-      positionFlashlight(W / 2 - 55, H / 2 + 130);
+      light(W/2,H/2);
     })();
   </script>
 </body>
