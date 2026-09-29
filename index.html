@@ -54,7 +54,7 @@
     <div class="next-wrap"><button class="button" id="next" hidden>Искать новый предмет</button></div>
     <div class="splash" id="splash"><div class="panel">
       <h1 id="title">Волшебный фонарик</h1>
-      <p id="message">Запомни комнату. Когда погаснет свет, зажми фонарик и води им по картине!</p>
+      <p id="message">Рассмотри комнату. Когда выключится свет, найди нужный предмет с помощью фонарика.</p>
       <button class="button" id="start">Начать игру</button>
     </div></div>
   </main>
@@ -136,7 +136,7 @@
           darkCtx.save();
           darkCtx.translate(cx,cy);
           darkCtx.scale(rx,ry);
-          const foundLight=darkCtx.createRadialGradient(0,0,0,0,0,1);
+          const foundLight=darkCtx.createRadialGradient(0,0,0,0,1);
           foundLight.addColorStop(0,'rgba(255,255,255,.88)');
           foundLight.addColorStop(.48,'rgba(255,255,255,.75)');
           foundLight.addColorStop(.78,'rgba(255,255,255,.35)');
